@@ -1,32 +1,60 @@
-name: 'Terraform'
-
-on:
-  push:
-    branches:
+trigger:
+  branches:
+    include:
       - main
       - develop
       - feature/*
       - hotfix/*
-    paths:
+  paths:
+    include:
       - 'src/**'
-  pull_request:
-    branches:
+
+pr:
+  branches:
+    include:
       - main
       - develop
       - feature/*
       - hotfix/*
-    paths:
+  paths:
+    include:
       - 'src/**'
-  workflow_dispatch:
 
-jobs:
-  terraform:
-    name: 'Terraform'
-    uses: szirmaibence98/templates/.github/workflows/terraform.yml@main
-    with:
-      environment_name: 'dev'
-    secrets:
-      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    pytest tests/
+  displayName: 'Run tests'
+
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y unzip
+    wget https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+    unzip terraform_1.0.11_linux_amd64.zip
+    sudo mv terraform /usr/local/bin/
+    terraform --version
+  displayName: 'Install Terraform'
+
+- script: |
+    terraform init
+  displayName: 'Terraform Init'
+
+- script: |
+    terraform plan
+  displayName: 'Terraform Plan'
+
+- script: |
+    terraform apply -auto-approve
+  displayName: 'Terraform Apply'
